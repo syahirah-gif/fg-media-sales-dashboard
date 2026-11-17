@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Dashboard — FG Media 2026</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --card: #ffffff; --text: #1f2937; --muted: #6b7280;
+    --border: #e5e7eb; --accent: #2563eb; --green: #16a34a; --amber: #d97706; --red: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+    padding: 32px 24px 64px;
+  }
+  .container { max-width: 980px; margin: 0 auto; }
+  header.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 24px;
+  }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .subtitle { color: var(--muted); font-size: 13px; }
+  .month-filter { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  select {
+    font: inherit; font-size: 14px; padding: 7px 12px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--card); color: var(--text); cursor: pointer;
+  }
+  section { margin-bottom: 28px; }
+  h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .stat .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .stat .value { font-size: 22px; font-weight: 600; }
+  .stat .hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .projection-note {
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--muted);
+  }
+  .projection-note b { color: var(--text); }
+  .status-chips { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .chip {
+    font-size: 13px; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--bg);
+  }
+  .chip b { font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: left; font-size: 12px; font-weight: 500; color: var(--muted);
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; font-weight: 500; }
+  .badge.good { background: #f0fdf4; color: var(--green); }
+  .badge.mid { background: #fffbeb; color: var(--amber); }
+  .badge.low { background: #fef2f2; color: var(--red); }
+  .num { font-variant-numeric: tabular-nums; }
+  .type-row { margin-bottom: 14px; }
+  .type-row:last-child { margin-bottom: 0; }
+  .type-head { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .type-head .amount { color: var(--muted); }
+  .bar-track { height: 10px; background: var(--bg); border-radius: 999px; border: 1px solid var(--border); overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 999px; }
+  .best-note { margin-top: 14px; font-size: 13px; color: var(--muted); }
+  .best-note b { color: var(--text); }
+  .src-note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="topbar">
+    <div>
+      <h1>Sales Dashboard — FG Media</h1>
+      <div class="subtitle">BD team monthly direct sales vs 2026 targets, from the Sales Targets &amp; Projection workbook.</div>
+    </div>
+    <div class="month-filter">
+      <label for="monthSelect">Month</label>
+      <select id="monthSelect"></select>
+    </div>
+  </header>
+
+  <section>
+    <h2>Dashboard Summary</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="label">Month Sales</div><div class="value" id="statMonth">–</div><div class="hint" id="statMonthHint">–</div></div>
+      <div class="stat"><div class="label">Month Target</div><div class="value" id="statTarget">–</div><div class="hint" id="statTargetHint">–</div></div>
+      <div class="stat"><div class="label">Active Salespeople</div><div class="value" id="statActive">–</div></div>
+      <div class="stat"><div class="label">Year-to-Date Sales</div><div class="value" id="statYTD">–</div><div class="hint" id="statYTDHint">–</div></div>
+      <div class="stat">
+        <div class="label">Monthly Projection</div>
+        <div class="value" id="statProjection">–</div>
+        <div class="hint" id="projectionHint">–</div>
+        <div class="projection-note">At the current run rate (<b id="projRate">–</b>/month), the year closes at <b id="projYear">–</b> against the RM 8,760,000 target (<b id="projGap">–</b>).</div>
+      </div>
+    </div>
+    <div class="status-chips">
+      <span class="chip">Above 80% of month target: <b id="chipAbove" style="color:var(--green)">–</b></span>
+      <span class="chip">On track (50–80%): <b id="chipMid" style="color:var(--amber)">–</b></span>
+      <span class="chip">Below 50%: <b id="chipBelow" style="color:var(--red)">–</b></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Monthly Sales by Salesperson</h2>
+    <div class="card" style="padding: 8px 4px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Salesperson</th><th>Month Sales (RM)</th><th>Month Target</th><th>Achievement</th><th>YTD Sales</th>
+          </tr>
+        </thead>
+        <tbody id="salesTableBody"></tbody>
+      </table>
+    </div>
+    <div class="src-note">Month target = quarterly target ÷ 3 months (Q1 RM 2.85M, Q2 RM 2.04M, Q3 RM 2.49M, Q4 RM 2.64M).</div>
+  </section>
+
+  <section>
+    <h2>Salesperson Contribution</h2>
+    <div class="card">
+      <div id="typeBars"></div>
+      <div class="best-note" id="bestNote"></div>
+    </div>
+  </section>
+
+  <!-- 4. Syera Pipeline -->
+  <section>
+    <h2>Syera's Pipeline — Q4 2026 (to December)</h2>
+    <div class="stat-grid" id="syeraStats"></div>
+    <div class="card" style="padding: 8px 4px; margin-top: 12px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Timing</th><th>Deal / Client</th><th>Value (RM)</th><th>Status</th><th>Note</th>
+          </tr>
+        </thead>
+        <tbody id="syeraTableBody"></tbody>
+      </table>
+    </div>
+    <div class="src-note">Source: "Syera Q4" sheet — invoiced deals (Oct–Nov), pitching pipeline (Nov–Dec), and active outreach. Statuses: Won = invoiced, Pitching = in active negotiation, Outreach = first contact made. Values are net amounts before 8% SST where applicable.</div>
+  </section>
+</div>
+
+<script>
+// ---- Real data extracted from "2026 Sales Targets & Projection - FG Media.xlsx", Summary sheet ----
+const MONTH_TARGETS = {
+  "2026-01": 950000, "2026-02": 950000, "2026-03": 950000,
+  "2026-04": 680000, "2026-05": 680000, "2026-06": 680000,
+  "2026-07": 830000, "2026-08": 830000, "2026-09": 830000,
+  "2026-10": 880000, "2026-11": 880000, "2026-12": 880000
+};
+const YEAR_TARGET = 8760000;
+
+// Monthly direct sales per salesperson (rows 44–82 of the Summary sheet)
+const monthly = [
+  // Q1
+  { m: "2026-01", p: "Yee Sun",  v: 38605.56 },
+  { m: "2026-01", p: "Rikco",    v: 0 },
+  { m: "2026-01", p: "Lina",     v: 59100 },
+  { m: "2026-01", p: "Reii",     v: 0 },
+  { m: "2026-01", p: "Syera",    v: 105518.51 },
+  { m: "2026-01", p: "Rasydan",  v: 64815.15 },
+  { m: "2026-01", p: "Amir",     v: 15000 },
+  { m: "2026-02", p: "Yee Sun",  v: 108537.04 },
+  { m: "2026-02", p: "Rikco",    v: 0 },
+  { m: "2026-02", p: "Lina",     v: 59500 },
+  { m: "2026-02", p: "Reii",     v: 0 },
+  { m: "2026-02", p: "Syera",    v: 17000 },
+  { m: "2026-02", p: "Rasydan",  v: 0 },
+  { m: "2026-02", p: "Amir",     v: 43000 },
+  { m: "2026-03", p: "Yee Sun",  v: 50477.78 },
+  { m: "2026-03", p: "Rikco",    v: 17000 },
+  { m: "2026-03", p: "Lina",     v: 26400 },
+  { m: "2026-03", p: "Reii",     v: 65777.7 },
+  { m: "2026-03", p: "Syera",    v: 404592.6 },
+  { m: "2026-03", p: "Rasydan",  v: 200000 },
+  { m: "2026-03", p: "Amir",     v: 0 },
+  // Q2
+  { m: "2026-04", p: "Yee Sun",  v: 124700 },
+  { m: "2026-04", p: "Lina",     v: 133000 },
+  { m: "2026-04", p: "Reii",     v: 0 },
+  { m: "2026-04", p: "Syera",    v: 96296.3 },
+  { m: "2026-04", p: "Rasydan",  v: 129629.63 },
+  { m: "2026-04", p: "Amir",     v: 30000 },
+  { m: "2026-04", p: "KiniEvents", v: 0 },
+  { m: "2026-05", p: "Yee Sun",  v: 68700 },
+  { m: "2026-05", p: "Lina",     v: 29000 },
+  { m: "2026-05", p: "Reii",     v: 34000 },
+  { m: "2026-05", p: "Syera",    v: 127592.59 },
+  { m: "2026-05", p: "Rasydan",  v: 92592.59 },
+  { m: "2026-05", p: "Amir",     v: 0 },
+  { m: "2026-05", p: "KiniEvents", v: 0 },
+  { m: "2026-06", p: "Yee Sun",  v: 163777.78 },
+  { m: "2026-06", p: "Lina",     v: 99796.3 },
+  { m: "2026-06", p: "Reii",     v: 0 },
+  { m: "2026-06", p: "Syera",    v: 129629.62 },
+  { m: "2026-06", p: "Rasydan",  v: 114629.63 },
+  { m: "2026-06", p: "Amir",     v: 0 },
+  { m: "2026-06", p: "KiniEvents", v: 0 },
+  // Q3
+  { m: "2026-07", p: "Yee Sun",  v: 34813.3 },
+  { m: "2026-07", p: "Lina",     v: 2409 },
+  { m: "2026-07", p: "Syera",    v: 350000 },
+  { m: "2026-07", p: "Rasydan",  v: 141111.11 },
+  { m: "2026-07", p: "Petra",    v: 0 },
+  { m: "2026-07", p: "KiniEvents", v: 0 },
+  { m: "2026-08", p: "Yee Sun",  v: 132477.78 },
+  { m: "2026-08", p: "Lina",     v: 0 },
+  { m: "2026-08", p: "Syera",    v: 0 },
+  { m: "2026-08", p: "Rasydan",  v: 40000 },
+  { m: "2026-08", p: "Petra",    v: 0 },
+  { m: "2026-09", p: "Yee Sun",  v: 163896.18 },
+  { m: "2026-09", p: "Lina",     v: 178430 },
+  { m: "2026-09", p: "Syera",    v: 125000 },
+  { m: "2026-09", p: "Rasydan",  v: 12500 },
+  { m: "2026-09", p: "Petra",    v: 12500 },
+  // Q4
+  { m: "2026-10", p: "Yee Sun",  v: 107823.2 },
+  { m: "2026-10", p: "Lina",     v: 98000 },
+  { m: "2026-10", p: "Kiff",     v: 25000 },
+  { m: "2026-10", p: "Syera",    v: 181296.3 },
+  { m: "2026-10", p: "Rasydan",  v: 100000 },
+  { m: "2026-10", p: "KiniEvents", v: 0 },
+  { m: "2026-11", p: "Yee Sun",  v: 22000 },
+  { m: "2026-11", p: "Lina",     v: 32000 },
+  { m: "2026-11", p: "Kiff",     v: 46296.3 },
+  { m: "2026-11", p: "Syera",    v: 27777.77 },
+  { m: "2026-11", p: "Rasydan",  v: 80000 }
+];
+const YEAR_TO_DATE_THROUGH = "2026-11"; // last month with recorded sales
+const PEOPLE = ["Yee Sun","Lina","Syera","Rasydan","Kiff","Rikco","Reii","Amir","Petra","KiniEvents"];
+
+// ---- Syera Q4 pipeline (from "Syera Q4" sheet) ----
+// Q4 target RM 600,000; invoiced Oct RM 181,296.30 + Nov RM 27,777.77 (rows 7/14/23)
+const SYERA_Q4_TARGET = 600000;
+const SYERA_INVOICED = 181296.30 + 27777.77; // 209,074.07
+const SYERA_PIPELINE = [
+  // Secured / invoiced (won)
+  { t: "Oct 2026", c: "Pakatan Harapan — PRN Melaka 2026", v: 46296.30, st: "won", n: "QUO/INV 1904" },
+  { t: "Oct 2026", c: "Kem. Pengajian Tinggi (KPT) — Media Buy 2027/28", v: 135000.00, st: "won", n: "Execution Jan '27 – Jul '28" },
+  { t: "Nov 2026", c: "Kem. Kemajuan Desa & Wilayah (KKDW) — Pencapaian KKDW 2026", v: 27777.77, st: "won", n: "QUO/INV 1906" },
+  // Active pitching, expected Nov–Dec 2026
+  { t: "Nov", c: "Kerajaan Negeri Pahang — Media Buy 2026/27", v: 50000.00, st: "pitching", n: "" },
+  { t: "Nov", c: "Kem. Komunikasi (Invictus Blue)", v: 200000.00, st: "pitching", n: "" },
+  { t: "Nov", c: "KESUMA", v: 10000.00, st: "pitching", n: "" },
+  { t: "Dec", c: "MCMC — Media Buy & Event Partnership (ONSA)", v: 200000.00, st: "pitching", n: "Schedule meeting with En Zamir" },
+  { t: "Nov W3/W4", c: "Premier's Office — PRN Sarawak (TVS + Borneo Post)", v: null, st: "pitching", n: "Value TBD" },
+  { t: "Nov W1", c: "KiniTV — Melaka + Sarawak PRN Live Reporting (14 Nov)", v: null, st: "pitching", n: "With Nadya & Dan" },
+  // Active cold outreach
+  { t: "Dec '26", c: "InvictusBlue Nikko — KK", v: 400000.00, st: "outreach", n: "46 advertorials" },
+  { t: "2027", c: "Jaya Grocer — Ramadan 2027", v: 46388.00, st: "outreach", n: "" },
+  { t: "2027", c: "Jirnexu (RinggitPlus)", v: 153000.00, st: "outreach", n: "10 articles × 2 languages" },
+  { t: "Q4→2027", c: "Repeat clients: LHDN, EPF, TalentCorp, BSN, IJN, McD (OMD), MBB Islamic", v: null, st: "outreach", n: "2027 utilisation of 2025 Q4 deals" }
+];
+const SYERA_BUDGET_MONTHS_LEFT = 1; // November is partially booked; December remains
+
+
+const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const fmtRM = v => "RM " + Math.round(v).toLocaleString("en-MY");
+const monthLabel = m => monthNames[+m.split("-")[1] - 1] + " " + m.split("-")[0];
+
+// ---- Month filter ----
+const monthSelect = document.getElementById("monthSelect");
+const months = [...new Set(monthly.map(r => r.m))].sort();
+months.forEach(m => {
+  const opt = document.createElement("option");
+  opt.value = m; opt.textContent = monthLabel(m);
+  monthSelect.appendChild(opt);
+});
+monthSelect.value = months[months.length - 1];
+monthSelect.addEventListener("change", renderAll);
+
+// ---- Helpers ----
+function monthRows(m) { return monthly.filter(r => r.m === m); }
+function ytdThrough(m) {
+  return monthly.filter(r => r.m <= m).reduce((s, r) => s + r.v, 0);
+}
+function ytdByPerson(m) {
+  const map = {};
+  monthly.filter(r => r.m <= m).forEach(r => { map[r.p] = (map[r.p] || 0) + r.v; });
+  return map;
+}
+
+// ---- Render ----
+function renderAll() {
+  const sel = monthSelect.value;
+  const rows = monthRows(sel);
+  const monthSales = rows.reduce((s, r) => s + r.v, 0);
+  const monthTarget = MONTH_TARGETS[sel];
+  const active = rows.filter(r => r.v > 0).length;
+  const ytd = ytdThrough(sel);
+
+  document.getElementById("statMonth").textContent = fmtRM(monthSales);
+  document.getElementById("statMonthHint").textContent = monthLabel(sel) + ", BD team direct sales";
+  document.getElementById("statTarget").textContent = fmtRM(monthTarget);
+  document.getElementById("statTargetHint").textContent =
+    Math.round((monthSales / monthTarget) * 100) + "% of month target achieved";
+  document.getElementById("statActive").textContent = active;
+  document.getElementById("statYTD").textContent = fmtRM(ytd);
+  document.getElementById("statYTDHint").textContent =
+    Math.round((ytd / YEAR_TARGET) * 100) + "% of RM 8.76M year target";
+
+  // Projection: average monthly sales Jan..selected month
+  const monthsSoFar = months.indexOf(sel) + 1;
+  const rate = ytd / monthsSoFar;
+  const projectedYear = rate * 12;
+  document.getElementById("statProjection").textContent = fmtRM(projectedYear);
+  document.getElementById("projectionHint").textContent = "Projected full-year close";
+  document.getElementById("projRate").textContent = fmtRM(rate);
+  document.getElementById("projYear").textContent = fmtRM(projectedYear);
+  const gap = projectedYear - YEAR_TARGET;
+  document.getElementById("projGap").textContent =
+    (gap >= 0 ? "+" : "−") + fmtRM(Math.abs(gap)).replace("RM ", "RM ") +
+    (gap >= 0 ? " above target" : " below target");
+
+  // Salesperson table for the month
+  const ytdMap = ytdByPerson(sel);
+  const tbody = document.getElementById("salesTableBody");
+  tbody.innerHTML = "";
+  rows.sort((a, b) => b.v - a.v).forEach(r => {
+    const target = monthTarget / rows.length;
+    const pct = r.v / target;
+    let badge, cls;
+    if (pct >= 0.8) { badge = Math.round(pct * 100) + "% of share"; cls = "good"; }
+    else if (pct >= 0.5) { badge = Math.round(pct * 100) + "% of share"; cls = "mid"; }
+    else { badge = Math.round(pct * 100) + "% of share"; cls = "low"; }
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + r.p + "</td>" +
+      '<td class="num">' + fmtRM(r.v) + "</td>" +
+      '<td class="num">' + fmtRM(target) + "</td>" +
+      '<td><span class="badge ' + cls + '">' + badge + "</span></td>" +
+      '<td class="num">' + fmtRM(ytdMap[r.p] || 0) + "</td>";
+    tbody.appendChild(tr);
+  });
+
+  // Status chips
+  const above = rows.filter(r => r.v / (monthTarget / rows.length) >= 0.8).length;
+  const mid = rows.filter(r => { const p = r.v / (monthTarget / rows.length); return p >= 0.5 && p < 0.8; }).length;
+  const below = rows.filter(r => r.v / (monthTarget / rows.length) < 0.5).length;
+  document.getElementById("chipAbove").textContent = above;
+  document.getElementById("chipMid").textContent = mid;
+  document.getElementById("chipBelow").textContent = below;
+
+  // Contribution bars (YTD by salesperson through selected month)
+  const entries = Object.entries(ytdMap).sort((a, b) => b[1] - a[1]);
+  const barsEl = document.getElementById("typeBars");
+  barsEl.innerHTML = "";
+  const max = entries[0][1] || 1;
+  entries.forEach(([p, v]) => {
+    const row = document.createElement("div");
+    row.className = "type-row";
+    row.innerHTML =
+      '<div class="type-head"><span>' + p + "</span><span class=\"amount\">" + fmtRM(v) + "</span></div>" +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + Math.max(1, Math.round((v / max) * 100)) + '%"></div></div>';
+    barsEl.appendChild(row);
+  });
+  document.getElementById("bestNote").innerHTML =
+    "<b>" + entries[0][0] + "</b> contributes the most year-to-date with <b>" + fmtRM(entries[0][1]) +
+    "</b> (" + Math.round((entries[0][1] / ytd) * 100) + "% of team sales through " + monthLabel(sel) + ").";
+}
+
+// ---- Syera pipeline render (static Q4 view, not month-filtered) ----
+function renderSyera() {
+  const won = SYERA_PIPELINE.filter(d => d.st === "won").reduce((s, d) => s + (d.v || 0), 0);
+  const pitching = SYERA_PIPELINE.filter(d => d.st === "pitching").reduce((s, d) => s + (d.v || 0), 0);
+  const outreach = SYERA_PIPELINE.filter(d => d.st === "outreach").reduce((s, d) => s + (d.v || 0), 0);
+  const gap = Math.max(0, SYERA_Q4_TARGET - SYERA_INVOICED);
+  const projection = SYERA_INVOICED + pitching; // secured + active pitching expected to close by Dec
+
+  const stats = [
+    ["Q4 Target", fmtRM(SYERA_Q4_TARGET), ""],
+    ["Invoiced to date", fmtRM(SYERA_INVOICED), Math.round((SYERA_INVOICED / SYERA_Q4_TARGET) * 100) + "% of Q4 target"],
+    ["Gap to close", fmtRM(gap), "invoicing needed by 31 Dec 2026"],
+    ["Active pitching", fmtRM(pitching), "deals in negotiation, Nov–Dec"],
+    ["December projection", fmtRM(projection), Math.round((projection / SYERA_Q4_TARGET) * 100) + "% of target if pitching closes"],
+    ["Cold outreach value", fmtRM(outreach), "upside beyond Q4 (some lands in 2027)"]
+  ];
+  const statsEl = document.getElementById("syeraStats");
+  statsEl.innerHTML = "";
+  stats.forEach(([label, value, hint]) => {
+    const div = document.createElement("div");
+    div.className = "stat";
+    div.innerHTML = '<div class="label">' + label + '</div><div class="value">' + value +
+      '</div>' + (hint ? '<div class="hint">' + hint + "</div>" : "");
+    statsEl.appendChild(div);
+  });
+
+  const tbody = document.getElementById("syeraTableBody");
+  tbody.innerHTML = "";
+  const stLabel = { won: "Won / Invoiced", pitching: "Pitching", outreach: "Outreach" };
+  SYERA_PIPELINE.forEach(d => {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + d.t + "</td>" +
+      "<td>" + d.c + "</td>" +
+      '<td class="num">' + (d.v == null ? "TBD" : fmtRM(d.v)) + "</td>" +
+      '<td><span class="badge ' + (d.st === "won" ? "good" : d.st === "pitching" ? "mid" : "low") + '">' + stLabel[d.st] + "</span></td>" +
+      '<td style="color:var(--muted);font-size:13px">' + (d.n || "—") + "</td>";
+    tbody.appendChild(tr);
+  });
+}
+
+renderAll();
+renderSyera();
+</script>
+</body>
+</html>
